@@ -14,13 +14,18 @@ struct Node {
 
 class Tree {
 public:
+
+    Node* prevNode(int num);
+
     void add(int num);
 
     bool isEmpty();
 
     bool get(int num);
 
-    int getMin();
+    bool getRec(int num);
+
+    Node* getMin();
 
     int getMax();
 
@@ -30,17 +35,21 @@ public:
 
     std::string postOrder();
 
+    void deleteNode(int num);
+
 
 private:
     Node *first = nullptr;
 
+    bool getRecHidden(int num, Node* otherNode);
+
     std::string preOrderHidden(Node *currentNode);
 
-    std::string inOrderHidden(Node *currentNode);
+    void inOrderHidden(Node *currentNode, std::string &st);
 
     std::string postOrderHidden(Node *currentNode);
 
-    int getMin(Node *currentNode);
+    Node* getMin(Node *currentNode);
 
 };
 
@@ -89,22 +98,46 @@ bool Tree::get(int num) {
     return flag;
 }
 
+bool Tree::getRecHidden(int num, Node* otherNode) {
+    bool flag = false;
+    if (isEmpty()) {
+        throw std::logic_error("Using GETREC function is impossible, Tree is empty!");
+    }  else if (!otherNode){
+        return flag;
+    } else {
+        if (num > otherNode->data) {
+            return getRecHidden(num, otherNode->right);
+        } else if (num < otherNode->data) {
+            return getRecHidden(num, otherNode->left);
+        } else if (num == otherNode->data) {
+            flag = true;
+        }
+        return flag;
+    }
+}
+
+bool Tree::getRec(int num) {
+    auto otherNode = first;
+    return getRecHidden(num, otherNode);
+}
+
+
 bool Tree::isEmpty() {
     return first == nullptr;
 }
 
-int Tree::getMin(Node *currentNode) {
+Node* Tree::getMin(Node *currentNode) {                                  // new
     if (isEmpty()) {
         throw std::logic_error("Using GETMIN function is impossible, Tree is empty!");
     }
     if (currentNode->left) {
         return getMin(currentNode->left);
     } else {
-        return currentNode->data;
+        return currentNode;
     }
 }
 
-int Tree::getMin() {
+Node* Tree::getMin() {                                                        // new
     return getMin(first);
 }
 
@@ -145,39 +178,117 @@ std::string Tree::preOrder() {
 }
 
 
-std::string Tree::inOrderHidden(Node *currentNode) {
-    std::string s;
+void Tree::inOrderHidden(Node *currentNode, std::string &st) {
     if (isEmpty()) {
         throw std::logic_error("Using this function is impossible, Tree is empty!");
+    } else if (!currentNode) {
+        return;
     } else {
-        inOrderHidden(currentNode->left);
-        s += std::to_string(currentNode->data);
-        inOrderHidden(currentNode->right);
+        inOrderHidden(currentNode->left, st);
+        st += std::to_string(currentNode->data);
+        inOrderHidden(currentNode->right, st);
     }
-    return s;
 }
 
 std::string Tree::inOrder() {
-
+    auto runner = first;
+    std::string st;
+    inOrderHidden(runner,st);
+    return st;
 }
 
 std::string Tree::postOrderHidden(Node *currentNode) {
     std::string s;
     if (isEmpty()) {
         throw std::logic_error("Using this function is impossible, Tree is empty!");
+    } else if (!currentNode){
+        return s;
     } else {
-        while (currentNode) {
-            s += std::to_string(currentNode->data);
-            preOrderHidden(currentNode->right);
-            preOrderHidden(currentNode->left);
-        }
+        s += postOrderHidden(currentNode->left);
+        s += postOrderHidden(currentNode->right);
+        s += std::to_string(currentNode->data);
     }
     return s;
 }
 
 std::string Tree::postOrder() {
-
+    auto runner = first;
+    std::string st;
+    st += postOrderHidden(runner);
+    return st;
 }
+
+void Tree::deleteNode(int num) {
+    if (isEmpty()) {
+        throw std::logic_error("Using delete function is impossible, Tree is empty!");
+    } else {
+        auto otherNode = first;
+        Node* additionalPrev = nullptr;
+        while (otherNode && num != otherNode->data) {
+            if (num > otherNode->data) {
+                additionalPrev = otherNode;
+                otherNode = otherNode->right;
+            } else if (num < otherNode->data) {
+                additionalPrev = otherNode;
+                otherNode = otherNode->left;
+            }
+        }
+        if (!otherNode){
+            throw std::invalid_argument("Key is not in tree!");
+        }
+        auto tmp = otherNode;
+        if (additionalPrev == nullptr){
+            additionalPrev = otherNode;
+            deleteNode(otherNode->data);
+        }
+        if (otherNode->left == nullptr) {
+            if (additionalPrev->data > otherNode->data) {
+                additionalPrev->left = otherNode->right;
+            } else if (additionalPrev->data <= otherNode->data) {
+                additionalPrev->right = otherNode->right;
+            }
+            delete tmp;
+        } else if (otherNode->right == nullptr){
+            if (additionalPrev->data > otherNode->data){
+                additionalPrev->left = otherNode->left;
+            } else if (additionalPrev->data < otherNode->data){
+                additionalPrev->right = otherNode->left;
+            }
+            delete tmp;
+        } else if (otherNode->left && otherNode->right){
+            auto minNode = getMin(otherNode->right);
+            if (otherNode->right->data > minNode->data){
+                int addMin = minNode->data;
+                deleteNode(minNode->data);
+                otherNode->data = addMin;
+            }else if (otherNode->right->data <= minNode->data){
+                otherNode->right = minNode;
+                int addMin = minNode->data;
+                deleteNode(minNode->data);
+                otherNode->data = addMin;
+            }
+        }
+    }
+}
+
+Node* Tree::prevNode(int num) {
+    auto runner = first;
+    Node* neededNode = nullptr;
+    while (runner) {
+        if (num > runner->data) {
+            neededNode = runner;
+            runner = runner->right;
+        } else if (num < runner->data) {
+            neededNode = runner;
+            runner = runner->left;
+        } else if (num == runner->data) {
+            break;
+        }
+    }
+    return neededNode;
+}
+
+
 
 
 //int main() {
@@ -213,14 +324,27 @@ int main() {
     t.add(2);
     t.add(6);
 
-    std::cout << "Is there such a number? " << t.get(0) << std::endl;
-    std::cout << "Is there such a number? " << t.get(1) << std::endl;
+    t.prevNode(5);
+//    std::cout << "Is there such a number? " << t.get(0) << std::endl;
+//    std::cout << "Is there such a number? " << t.get(1) << std::endl;
+    std::cout << "*rec*  Is there such a number? " << t.getRec(1) << std::endl;
 
     std::cout << "Min number: " << t.getMin() << std::endl;
 
     std::cout << "Max number: " << t.getMax() << std::endl;
 
-    std::cout << t.preOrder();
+    std::cout << "Pre-Order: " << t.preOrder();
+    std::cout << std::endl;
+
+    t.deleteNode(3);
+
+    std::cout << "Pre-Order: " << t.preOrder();
+    std::cout << std::endl;
+
+    std::cout << "Post-Order: " << t.postOrder();
+    std::cout << std::endl;
+
+    std::cout << "In-Order: " << t.inOrder();
     std::cout << std::endl;
 
     return 0;
